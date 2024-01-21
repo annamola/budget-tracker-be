@@ -1,29 +1,59 @@
-console.log(`Your node version is ${process.version}`);
-
 ("use strict");
-require("dotenv").config();
-const fs = require("fs/promises");
-const express = require("express");
-const bodyParser = require("body-parser");
-const moment = require("moment");
-const { Configuration, PlaidEnvironments, PlaidApi } = require("plaid");
+import dotenv from "dotenv";
+dotenv.config();
+
+import { readFile, writeFile } from "fs/promises";
+import express from "express";
+import pkg from "body-parser";
+const { urlencoded, json } = pkg;
+import moment from "moment";
+import { Configuration, PlaidEnvironments, PlaidApi } from "plaid";
+import { MongoClient, ServerApiVersion, ObjectId } from "mongodb";
+import { findUserById } from "./controllers/userController.js";
 
 const APP_PORT = process.env.APP_PORT || 8000;
 const CURR_USER_ID = process.env.USER_ID || 1;
-const USER_FILES_FOLDER = ".data";
+const USER_FILES_FOLDER = "./data";
 const FIELD_ACCESS_TOKEN = "accessToken";
 const FIELD_USER_STATUS = "userStatus";
 
 const app = express();
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+app.use(urlencoded({ extended: false }));
+app.use(json());
 app.use(express.static("public"));
 
 const server = app.listen(APP_PORT, function () {
   console.log(`Server is up and running at http://localhost:${APP_PORT}/`);
 });
 
-// Set up the Plaid client
+// const mongoClient = new MongoClient(process.env.CONNECTION_STRING, {
+//   serverApi: {
+//     version: ServerApiVersion.v1,
+//     strict: true,
+//     deprecationErrors: true,
+//   },
+// });
+
+// async function run() {
+//   try {
+//     // Connect the client to the server	(optional starting in v4.7)
+//     await mongoClient.connect();
+//     // Send a ping to confirm a successful connection
+//     await mongoClient.db("admin").command({ ping: 1 });
+//     console.log(
+//       "Pinged your deployment. You successfully connected to MongoDB!"
+//     );
+//     await findUserById(mongoClient, new ObjectId("65ad90dbd1e7f77d8ecc8ab8"));
+//     //make a new id!
+//     // console.log(new ObjectId());
+//   } finally {
+//     // Ensures that the client will close when you finish/error
+//     await mongoClient.close();
+//   }
+// }
+// run().catch(console.dir);
+
+// // Set up the Plaid client
 const plaidConfig = new Configuration({
   basePath: PlaidEnvironments["sandbox"],
   baseOptions: {
@@ -84,7 +114,7 @@ app.get("/server/run_tutorial_precheck", async (req, res, next) => {
 const getUserRecord = async function () {
   const userDataFile = `${USER_FILES_FOLDER}/user_data_${CURR_USER_ID}.json`;
   try {
-    const userData = await fs.readFile(userDataFile, {
+    const userData = await readFile(userDataFile, {
       encoding: "utf8",
     });
     const userDataObj = await JSON.parse(userData);
@@ -124,7 +154,7 @@ const updateUserRecord = async function (key, val) {
   userRecord[key] = val;
   try {
     const dataToWrite = JSON.stringify(userRecord);
-    await fs.writeFile(userDataFile, dataToWrite, {
+    await writeFile(userDataFile, dataToWrite, {
       encoding: "utf8",
       mode: 0o600,
     });
